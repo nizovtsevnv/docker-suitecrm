@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y cron libc-client-dev libcurl4-openssl-d
     libfreetype6-dev libjpeg62-turbo-dev libkrb5-dev libldap2-dev \
     libmcrypt-dev libpng-dev libpq-dev libssl-dev libxml2-dev unzip zlib1g-dev \
     && apt-get clean
-........
+
 RUN pecl install mcrypt-1.0.1 \
     && docker-php-ext-enable mcrypt \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
