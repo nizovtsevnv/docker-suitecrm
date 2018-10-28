@@ -1,65 +1,34 @@
-FROM php:7-apache
-MAINTAINER Simon Hugentobler <simon.hugentobler@bertschi.com>
+FROM php:7.2-apache
 
+LABEL maintainer="nizovtsevnv@gmail.com"
 
+WORKDIR /var/www/html
 
-COPY php.custom.ini /usr/local/etc/php/conf.d/
+COPY php.custom.ini /usr/local/etc/php/conf.d
 
-RUN apt-get update && apt-get install -y \
-        libfreetype6-dev \
-        libjpeg62-turbo-dev \
-        libmcrypt-dev \
-        libcurl4-openssl-dev \
-        libssl-dev \
-        libpng12-dev \
-        libpq-dev \
-        libxml2-dev \
-        zlib1g-dev \
-        libc-client-dev \
-        libkrb5-dev \
-        libldap2-dev \
-        cron
-RUN docker-php-ext-install -j$(nproc) iconv mcrypt \
+RUN apt-get update && apt-get install -y cron libc-client-dev libcurl4-openssl-dev \
+    libfreetype6-dev libjpeg62-turbo-dev libkrb5-dev libldap2-dev \
+    libmcrypt-dev libpng-dev libpq-dev libssl-dev libxml2-dev zlib1g-dev \
+    && apt-get clean
+        
+RUN pecl install mcrypt-1.0.1 \
+    && docker-php-ext-enable mcrypt \
+    && docker-php-ext-install -j$(nproc) iconv \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
     && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
     && docker-php-ext-configure ldap --with-libdir=lib/x86_64-linux-gnu/ \
-    && docker-php-ext-install -j$(nproc) pdo_mysql \
-        curl \
-        mbstring \
-        mysqli \
-        zip \
-        ftp \
-        pdo_pgsql \
-        gd \
-        fileinfo \
-        soap \
-        zip \
-        imap \
-        ldap
+    && docker-php-ext-install -j$(nproc) fileinfo gd imap ldap \
+       mysqli pdo_mysql pdo_pgsql soap
 
-#Setting UP SuiteCRM
-RUN curl -O https://codeload.github.com/salesagility/SuiteCRM/tar.gz/v7.9.4 && tar xvfz v7.9.4 --strip 1 -C /var/www/html
-RUN chown www-data:www-data /var/www/html/ -R
-RUN cd /var/www/html && chmod -R 755 .
-RUN (crontab -l 2>/dev/null; echo "*    *    *    *    *     cd /var/www/html; php -f cron.php > /dev/null 2>&1 ") | crontab -
-
-#Setting Up config file redirect for proper use with docker volumes
-RUN cd /var/www/html \
-    && mkdir conf.d \
-    && mv config_override.php conf.d/ \
-    && touch /var/www/html/conf.d/config.php \
-    && ln -s /var/www/html/conf.d/config.php config.php \
-    && ln -s /var/www/html/conf.d/config_override.php config_override.php
-
-#Fix php warnings in dashboards
-RUN cd /var/www/html \
-    && sed -i.back s/'<?php/<?php\n\nini_set\(display_errors\,0\)\;\nerror_reporting\(E_ALL\ \^\ E_STRICT\)\;\n\n/g' /var/www/html/modules/Calls/Dashlets/MyCallsDashlet/MyCallsDashlet.php
-
-
-RUN apt-get clean
+RUN curl https://codeload.github.com/salesagility/SuiteCRM/zip/master -o /tmp/master.zip \
+    && unzip /tmp/master.zip \
+    && SuiteCRM-master/* . \
+    && rm -rf SuiteCRM-master /tmp/master.zip \
+    && chown -R www-data:www-data . \
+    && chmod -R 755 . \
+    && echo "* * * * * cd /var/www/html; php -f cron.php > /dev/null 2>&1 " | crontab -
 
 VOLUME /var/www/html/upload
 VOLUME /var/www/html/conf.d
 
-WORKDIR /var/www/html
 EXPOSE 80
