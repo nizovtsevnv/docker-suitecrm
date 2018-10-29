@@ -29,8 +29,8 @@ RUN curl https://codeload.github.com/salesagility/SuiteCRM/zip/master -o /tmp/ma
 WORKDIR /var/www/html
 
 RUN mkdir conf.d \
-    && mv config_override.php conf.d/ \
     && touch /var/www/html/conf.d/config.php \
+    && touch /var/www/html/conf.d/config_override.php \
     && ln -s /var/www/html/conf.d/config.php config.php \
     && ln -s /var/www/html/conf.d/config_override.php config_override.php \
     && sudo -u www-data composer update --no-dev -n
